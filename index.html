@@ -500,7 +500,7 @@ async function addRow() {
   setLoading(true);
   showToast('loading','Fetching product data…');
   try {
-    const res = await fetch('/api/parse', {
+    const res = await fetch('/.netlify/functions/parse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })

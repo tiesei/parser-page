@@ -498,12 +498,26 @@ async function addRow() {
   const url = input.value.trim();
   if (!url) return;
   setLoading(true);
-  showToast('loading','Fetching product data…');
+  showToast('loading', 'Fetching page…');
   try {
+    // Step 1: fetch HTML in browser via allorigins proxy
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const proxyRes = await fetch(proxyUrl);
+    if (!proxyRes.ok) throw new Error('Could not fetch product page');
+    const proxyData = await proxyRes.json();
+    let html = (proxyData.contents || '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .slice(0, 10000);
+    if (!html) throw new Error('Empty page response');
+    showToast('loading', 'Analysing with AI…');
+    // Step 2: send HTML to our function for Claude analysis
     const res = await fetch('/.netlify/functions/parse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url, html })
     });
     const fabric = await res.json();
     if (!res.ok) throw new Error(fabric.error || `Server error ${res.status}`);

@@ -67,8 +67,8 @@ Extract product information and return ONLY valid JSON, no markdown, no code fen
 }
 
 IMPORTANT RULES:
-- colors: find ALL color variants on the page (look for color swatches, variant links, color options). For each color include its name and a product image URL (look for img src with cstatic.com or similar CDN). selectedColor = index of color matching the URL.
-- price: extract the actual price number shown (e.g. €16.90, not just "16,90 EUR")
+- colors: find ALL color variants on the page (look for variant links like /72597.SW, /72597.LMNLM etc, or color option labels). For each color use the main product image URL (from cstatic.com or similar CDN). selectedColor = index of color whose URL suffix matches the product URL.
+- price: extract the price exactly as shown on page e.g. "€16.90". Look for patterns like "€16.90/meter" or "16,90 EUR" — convert comma to dot, add € symbol.
 - article: use the article/SKU number from the page
 - Type rules: Outer=shell fabrics laminates ripstop. Lining=internal fabrics liners. Webbing=straps tapes. Zipper=zippers sliders. Foam=padding. Hardware=buckles clips rings. Other=else.
 - Use — for any missing spec value.`;

@@ -33,7 +33,7 @@ export default async (req) => {
                 .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
                 .replace(/<!--[\s\S]*?-->/g, '')
                 .replace(/\s{2,}/g, ' ')
-                .slice(0, 10000);
+                .slice(0, 20000);
     } catch (fetchErr) {
       return new Response(JSON.stringify({ error: `Could not fetch page: ${fetchErr.message}` }), { status: 500 });
     }
@@ -42,9 +42,36 @@ export default async (req) => {
 
 <html>${html}</html>
 
-Extract product information and return ONLY valid JSON, no markdown, no code fences:
-{"type":"Outer or Lining or Webbing or Zipper or Foam or Hardware or Other","brand":"brand or empty","name":"product name","article":"SKU and width e.g. No. 12345 · 140cm","desc":"one sentence max 20 words","specs":[{"k":"Water","v":"..."},{"k":"Weight","v":"..."},{"k":"Width","v":"..."},{"k":"Origin","v":"..."}],"colors":[{"label":"Color Name","img":"image URL or empty"}],"selectedColor":0,"weight":"XXX g/m2","weightSub":"imperial or empty","price":"EUR XX.XX","priceSub":"/meter or /piece","url":"${url}"}
-Type: Outer=shell fabrics laminates. Lining=internal fabrics. Webbing=straps tapes. Zipper=zippers. Foam=padding. Hardware=buckles clips. Other=else. Extract all colors with images. Use dash for missing specs.`;
+Extract product information and return ONLY valid JSON, no markdown, no code fences, no comments:
+{
+  "type": "Outer or Lining or Webbing or Zipper or Foam or Hardware or Other",
+  "brand": "brand name or empty string",
+  "name": "product name",
+  "article": "article number and width e.g. No. 72597 · 150cm",
+  "desc": "one sentence max 20 words describing material and key feature",
+  "specs": [
+    {"k":"Water","v":"value or —"},
+    {"k":"Weight","v":"value or —"},
+    {"k":"Width","v":"value or —"},
+    {"k":"Origin","v":"value or —"}
+  ],
+  "colors": [
+    {"label":"Color Name","img":"https://... full image URL"}
+  ],
+  "selectedColor": 0,
+  "weight": "178 g/m²",
+  "weightSub": "imperial or empty",
+  "price": "€16.90",
+  "priceSub": "/meter",
+  "url": "${url}"
+}
+
+IMPORTANT RULES:
+- colors: find ALL color variants on the page (look for color swatches, variant links, color options). For each color include its name and a product image URL (look for img src with cstatic.com or similar CDN). selectedColor = index of color matching the URL.
+- price: extract the actual price number shown (e.g. €16.90, not just "16,90 EUR")
+- article: use the article/SKU number from the page
+- Type rules: Outer=shell fabrics laminates ripstop. Lining=internal fabrics liners. Webbing=straps tapes. Zipper=zippers sliders. Foam=padding. Hardware=buckles clips rings. Other=else.
+- Use — for any missing spec value.`;
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -90,4 +117,4 @@ Type: Outer=shell fabrics laminates. Lining=internal fabrics. Webbing=straps tap
   }
 };
 
-
+export const config = { path: '/api/parse' };

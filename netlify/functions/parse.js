@@ -90,4 +90,4 @@ Type: Outer=shell fabrics laminates. Lining=internal fabrics. Webbing=straps tap
   }
 };
 
-export const config = { path: '/api/parse' };
+

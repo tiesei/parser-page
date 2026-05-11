@@ -54,7 +54,7 @@ Type: Outer=shell fabrics laminates. Lining=internal fabrics. Webbing=straps tap
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-5',
         max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }]
       })

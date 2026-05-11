@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fabric Spec Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e0ddd6;
+    --border2: #ccc9c0;
+    --accent: #2d6a2d;
+    --accent-light: #e8f4e8;
+    --text: #1a1a17;
+    --muted: #888880;
+    --tag-bg: #eeecea;
+    --danger: #c0312a;
+    --row-hover: #faf9f6;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+    padding: 32px 32px 64px;
+  }
+
+  /* HEADER */
+  header {
+    margin: 0 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .logo span { color: var(--muted); font-weight: 400; margin-left: 10px; }
+
+  /* ADD BAR */
+  .add-bar {
+    margin: 0 0 16px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .add-bar input {
+    flex: 1; min-width: 260px; max-width: 520px;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 6px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.83rem;
+    padding: 9px 14px; outline: none; transition: border-color 0.15s;
+    box-shadow: var(--shadow);
+  }
+  .add-bar input::placeholder { color: var(--muted); }
+  .add-bar input:focus { border-color: var(--accent); }
+
+  .add-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #fff;
+    font-family: 'Space Mono', monospace; font-size: 0.64rem; font-weight: 700;
+    letter-spacing: 0.04em; border: none; cursor: pointer;
+    padding: 9px 18px; border-radius: 6px;
+    transition: opacity 0.15s, transform 0.15s; white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+  .add-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .add-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .add-hint { font-size: 0.67rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  /* TOAST */
+  .toast {
+    display: none; margin: 0 0 12px;
+    padding: 9px 14px; border-radius: 6px;
+    font-family: 'Space Mono', monospace; font-size: 0.64rem;
+    letter-spacing: 0.04em; border: 1px solid;
+    align-items: center; gap: 8px;
+  }
+  .toast.loading { display:flex; background:#f0f8f0; border-color:#a8d4a8; color:var(--accent); }
+  .toast.error   { display:flex; background:#fdf0f0; border-color:#e8b4b0; color:var(--danger); }
+  .spinner {
+    width:12px; height:12px; border:2px solid #a8d4a8;
+    border-top-color:var(--accent); border-radius:50%;
+    animation:spin 0.7s linear infinite; flex-shrink:0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TABLE WRAPPER — full width, no clipping */
+  .table-wrap { width: 100%; overflow-x: auto; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    min-width: 860px;
+  }
+
+  thead th {
+    font-family: 'Space Mono', monospace; font-size: 0.58rem; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+    padding: 11px 14px; text-align: left;
+    background: #faf9f6;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; vertical-align: middle; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--row-hover); }
+  td { padding: 13px 14px; vertical-align: middle; }
+
+  /* TYPE TAG */
+  .type-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'Space Mono', monospace; font-size: 0.57rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-light);
+    border: 1px solid #b8dab8; border-radius: 3px;
+    padding: 3px 8px; white-space: nowrap;
+  }
+  .type-tag .dot { width:5px; height:5px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+
+  /* FABRIC CELL */
+  .fabric-cell { display:flex; align-items:center; gap:10px; }
+  .swatch {
+    flex-shrink: 0; border-radius: 5px;
+    border: 1px solid rgba(0,0,0,0.1);
+    overflow: hidden; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .swatch img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .swatch-lg { width:46px; height:46px; }
+  .swatch-sm { width:32px; height:32px; border-radius:4px; }
+  .swatch-xs { width:22px; height:22px; border-radius:3px; }
+
+  .fabric-brand { font-size:0.59rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px; }
+  .fabric-name  { font-family:'Space Mono',monospace; font-size:0.73rem; font-weight:700; color:var(--text); line-height:1.3; }
+  .fabric-art   { font-size:0.58rem; color:var(--muted); margin-top:2px; }
+
+  /* DESC */
+  .desc { font-size:0.77rem; color:#555550; line-height:1.6; max-width:250px; }
+
+  /* SPECS */
+  .specs { display:flex; flex-direction:column; gap:3px; }
+  .spec-row { display:flex; gap:8px; align-items:baseline; white-space:nowrap; }
+  .spec-key { font-family:'Space Mono',monospace; font-size:0.55rem; color:var(--muted); letter-spacing:0.06em; text-transform:uppercase; min-width:48px; }
+  .spec-val { font-size:0.73rem; color:var(--text); font-weight:500; }
+
+  /* ── COLOR DROPDOWN ── */
+  .cd-wrap { position:relative; width:196px; user-select:none; }
+
+  .cd-trigger {
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface); border:1px solid var(--border2);
+    border-radius:5px; padding:5px 9px; cursor:pointer;
+    transition:border-color 0.15s; box-shadow:var(--shadow);
+  }
+  .cd-trigger:hover, .cd-wrap.open .cd-trigger { border-color:var(--accent); }
+
+  .cd-label { flex:1; font-size:0.75rem; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cd-arrow { color:var(--muted); font-size:0.6rem; flex-shrink:0; transition:transform 0.18s; }
+  .cd-wrap.open .cd-arrow { transform:rotate(180deg); }
+
+  /* Dropdown menu — fixed positioning to escape table overflow */
+  .cd-menu {
+    display: none;
+    position: fixed;           /* escape table stacking context */
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    z-index: 9999;
+    max-height: 260px;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+    min-width: 196px;
+  }
+  .cd-wrap.open .cd-menu { display: block; }
+
+  .cd-menu::-webkit-scrollbar { width:3px; }
+  .cd-menu::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+  .cd-menu::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+
+  .cd-item {
+    display:flex; align-items:center; gap:9px;
+    padding:6px 10px; cursor:pointer;
+    border-bottom:1px solid var(--border);
+    transition:background 0.1s;
+  }
+  .cd-item:last-child { border-bottom:none; }
+  .cd-item:hover { background:var(--accent-light); }
+  .cd-item.sel { background:#f0f8f0; }
+  .cd-item.sel .cd-item-label { color:var(--accent); font-weight:600; }
+
+  .cd-item-label { font-size:0.74rem; color:var(--text); flex:1; }
+  .cd-check { color:var(--accent); font-size:0.65rem; flex-shrink:0; opacity:0; }
+  .cd-item.sel .cd-check { opacity:1; }
+
+  /* WEIGHT / PRICE */
+  .weight { font-family:'Space Mono',monospace; font-size:0.86rem; font-weight:700; color:var(--text); white-space:nowrap; }
+  .weight sub { font-size:0.57rem; color:var(--muted); font-weight:400; display:block; margin-top:1px; }
+  .price { font-family:'Space Mono',monospace; font-size:0.92rem; font-weight:700; color:var(--accent); white-space:nowrap; }
+  .price sub { font-size:0.57rem; color:var(--muted); font-weight:400; display:block; margin-top:1px; }
+
+  /* LINK */
+  .link-cell-inner { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+  .link-btn {
+    display:inline-flex; align-items:center; gap:5px;
+    background:var(--accent); color:#fff;
+    font-family:'Space Mono',monospace; font-size:0.58rem; font-weight:700;
+    letter-spacing:0.04em; text-decoration:none;
+    padding:6px 11px; border-radius:4px; white-space:nowrap;
+    transition:opacity 0.15s, transform 0.15s; box-shadow:var(--shadow);
+  }
+  .link-btn:hover { opacity:0.85; transform:translateY(-1px); }
+
+  .del-btn {
+    display:inline-flex; align-items:center; gap:4px;
+    background:transparent; border:1px solid #e0c0c0; color:#b07070;
+    font-family:'Space Mono',monospace; font-size:0.56rem;
+    letter-spacing:0.04em; padding:4px 8px; border-radius:3px;
+    cursor:pointer; transition:border-color 0.15s, color 0.15s; white-space:nowrap;
+  }
+  .del-btn:hover { border-color:var(--danger); color:var(--danger); }
+
+  /* EMPTY */
+  .empty-row td { text-align:center; padding:52px 20px; color:var(--muted); font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:0.06em; }
+
+  /* FOOTER */
+  footer {
+    margin: 20px 0 0; display:flex; justify-content:space-between;
+    align-items:center; flex-wrap:wrap; gap:8px;
+    border-top:1px solid var(--border); padding-top:14px;
+  }
+  footer p { font-family:'Space Mono',monospace; font-size:0.57rem; color:var(--muted); letter-spacing:0.06em; }
+</style>
+</head>
+<body>
+
+<div class="add-bar">
+  <input type="url" id="urlInput" placeholder="Paste product URL from extremtextil.de, adventurexpert.com…" onkeydown="if(event.key==='Enter') addRow()">
+  <button class="add-btn" id="addBtn" onclick="addRow()">
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+    Add Material
+  </button>
+  <span class="add-hint">paste URL → Enter</span>
+</div>
+
+<div class="toast" id="toast">
+  <div class="spinner" id="toastSpinner" style="display:none"></div>
+  <span id="toastMsg"></span>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th><th>Fabric</th><th>Description</th>
+        <th>Key Specs</th><th>Color</th>
+        <th>Weight</th><th>Price</th><th>Link</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<footer>
+  <p id="rowCount">0 fabrics</p>
+  <p></p>
+</footer>
+
+<script>
+// ── COLOR MAP ──────────────────────────────────────────────────────────────────
+const COLOR_MAP = {
+  'black':'#1c1c1c','white':'#f2ede8','grey':'#9a9a98','gray':'#9a9a98',
+  'light grey':'#c8c8c4','slate':'#7a8898',
+  'red':'#c0312a','brick red':'#9e3a2a','bright orange':'#e8620a','orange':'#d4681a',
+  'fuchsia':'#c4367a','deep purple':'#4a2280','purple':'#6a3a9e','violet':'#5a3aa8',
+  'bright blue':'#2060d0','dark blue':'#162258','royal blue':'#2545a8',
+  'cornflower blue':'#5878c8','navy':'#1a2460','light blue':'#5a9ad4',
+  'sky blue':'#5aaae0','teal':'#1a7878','turquoise':'#1aa8a0',
+  'cadmium green':'#3a7a28','green olive':'#5a6820','army olive':'#4a5c20',
+  'olive':'#5c6428','jade':'#2a7858','forest green':'#2a5c30','green':'#2a8040',
+  'yellow':'#d4c020','bright yellow':'#e0d010',
+  'coyote':'#8c6a38','coyote brown':'#7a5c2e',
+  'sand':'#c4a870','beige':'#c8b490','coral':'#d05040','pink':'#d060a0',
+  'natural':'#d4c8b0','brown':'#6a4020','tan':'#b08050',
+  'rosé-dusty':'#c07888','rose':'#c46080','dusty rose':'#c07888',
+};
+function colorFromName(n) {
+  if (!n) return '#c8c4b8';
+  const k = n.toLowerCase().trim();
+  if (COLOR_MAP[k]) return COLOR_MAP[k];
+  for (const [key, val] of Object.entries(COLOR_MAP))
+    if (k.includes(key) || key.includes(k)) return val;
+  let h = 0; for (let i=0;i<k.length;i++) h=(h*31+k.charCodeAt(i))>>>0;
+  return `hsl(${h%360},35%,52%)`;
+}
+function swatchHtml(label, img, size) {
+  const bg = colorFromName(label);
+  const cls = `swatch swatch-${size}`;
+  const imgTag = img ? `<img src="${esc(img)}" alt="" referrerpolicy="no-referrer" crossorigin="anonymous" onerror="this.style.display='none'">` : '';
+  return `<div class="${cls}" style="background:${bg}">${imgTag}</div>`;
+}
+
+// ── SEED DATA ──────────────────────────────────────────────────────────────────
+let rows = [
+  {
+    type:"Outer", brand:"Challenge Sailcloth", name:"ECOPAK® EPX200", article:"No. 72449 · 142cm",
+    desc:"100% recycled polyester laminate. 3-layer: 200d outer + CrossPly fibres at 45° + 70d ripstop lining. FC-free C0 DWR.",
+    specs:[{k:"Water",v:"140,000mm"},{k:"Tear",v:"26.7 / 24.8 lb"},{k:"Abras",v:"500 cycles"},{k:"Origin",v:"China"}],
+    colors:[
+      {label:"Army Olive",   img:"https://extremtextil.cstatic.com/media/14/a5/09/1717076549/c5eb6e09820cb698c33c2e3760f22b82459bd758.jpeg?quality=90"},
+      {label:"Black",        img:"https://extremtextil.cstatic.com/media/01/bf/60/1717076545/e31b3cbb0ffc4f890576c783d73adee7b11a05cf.jpeg?quality=90"},
+      {label:"Brick Red",    img:"https://extremtextil.cstatic.com/media/7e/26/a2/1717076586/e18364841eb67b2de3dbd9cb7ab71a868e284253.jpeg?quality=90"},
+      {label:"Bright Blue",  img:"https://extremtextil.cstatic.com/media/e9/c1/e5/1717076575/ccf9aad06149603b35bd23ff829ed0d103ecb1b0.jpeg?quality=90"},
+      {label:"Bright Orange",img:"https://extremtextil.cstatic.com/media/b0/a8/6b/1717076553/ee26123d6dfce9b436510c057340358eefcd0fac.jpeg?quality=90"},
+      {label:"Coyote Brown", img:"https://extremtextil.cstatic.com/media/29/7c/71/1717076557/618523312b6bda604ae0fa2893a6ae4d97fa312c.jpeg?quality=90"},
+      {label:"Deep Purple",  img:"https://extremtextil.cstatic.com/media/40/76/22/1717076582/26be6d8f7d7fb5ed9ec32fc92935664964b918a8.jpeg?quality=90"},
+      {label:"Fuchsia",      img:"https://extremtextil.cstatic.com/media/47/6f/3d/1717076560/b5a4b5c2c9cb6d8fa999b9146448a63f029d6704.jpeg?quality=90"},
+      {label:"Jade",         img:"https://extremtextil.cstatic.com/media/f8/51/bc/1717076579/0123c43e7ecbf3975441b1a50db7825884f0f547.jpeg?quality=90"},
+      {label:"Light Blue",   img:"https://extremtextil.cstatic.com/media/fe/de/50/1717076564/65b64fa684f7424ac1ad6d38cf46ef20ee33ccfc.jpeg?quality=90"},
+      {label:"Red",          img:"https://extremtextil.cstatic.com/media/95/37/cf/1717076568/9bfb3ac6b03b81341868d2f4261a42901d893a50.jpeg?quality=90"},
+      {label:"Royal Blue",   img:"https://extremtextil.cstatic.com/media/46/a6/8f/1717076571/02f199e503dff8e4b9dfb5207e1f87252dd7cda9.jpeg?quality=90"},
+      {label:"Slate",        img:"https://extremtextil.cstatic.com/media/10/ae/5f/1756718622/effd60f21ccd55f304bfb5b0ab6bd221f379f79f.jpeg?quality=90"},
+    ],
+    selectedColor:5, weight:"200 g/m²", weightSub:"5.9 oz/yd²", price:"€33.40", priceSub:"/meter",
+    url:"https://www.extremtextil.de/en/ecopak-epx200-recycling-backpack-laminate-200g-sqm/72449.COYOBR"
+  },
+  {
+    type:"Outer", brand:"Dimension-Polyant", name:"X-Pac® VX21", article:"No. 70524 · 140cm",
+    desc:"210d nylon laminate. 3-layer: nylon outer + 0.25mil PET film + 50d polyester taffeta. X-PLY fibres give iconic diamond structure.",
+    specs:[{k:"Water",v:"140,000mm"},{k:"Tear",v:"108.5 / 76.5 N"},{k:"Abras",v:"500 cycles"},{k:"Origin",v:"USA"}],
+    colors:[
+      {label:"Black",         img:"https://extremtextil.cstatic.com/media/c6/2b/29/1717071131/c3531d8e91cf4b9e871fb64c73de89a8856a3a36.jpeg?quality=90"},
+      {label:"Cadmium Green", img:"https://extremtextil.cstatic.com/media/10/89/57/1717071143/9e49cccf4c8131779372d23cd502637b9304d105.jpeg?quality=90"},
+      {label:"Coral",         img:"https://extremtextil.cstatic.com/media/58/a4/00/1717071096/be97496611a17a7f43121e7ce745d2f73a6a866e.jpeg?quality=90"},
+      {label:"Cornflower Blue",img:"https://extremtextil.cstatic.com/media/98/76/b5/1717071122/275a91a7dbd44a9d9c8b395ec2b2ae8df23458fd.jpeg?quality=90"},
+      {label:"Coyote",        img:"https://extremtextil.cstatic.com/media/e3/34/56/1717071139/96efef8b366ba54e58cb83299e59d536a390ef62.jpeg?quality=90"},
+      {label:"Dark Blue",     img:"https://extremtextil.cstatic.com/media/39/23/6a/1717071091/271129e7a9d0677f6223d542f1402a18e6403fe3.jpeg?quality=90"},
+      {label:"Green Olive",   img:"https://extremtextil.cstatic.com/media/d0/37/fc/1717071118/e249cee136d8d459306d56c3f8497c52f90affc1.jpeg?quality=90"},
+      {label:"Grey",          img:"https://extremtextil.cstatic.com/media/3a/ba/54/1717071104/225fb4f6f265dbee2d4bfba2d897d1ea7b1a38cc.jpeg?quality=90"},
+      {label:"Orange",        img:"https://extremtextil.cstatic.com/media/4c/64/f7/1717071126/8eb17087ed95833b5c4f8df9acde0cac786d8e83.jpeg?quality=90"},
+      {label:"Red",           img:"https://extremtextil.cstatic.com/media/8e/ca/ec/1717071135/c4cc100f67c230b4603c8a69490901f01d0a71b5.jpeg?quality=90"},
+      {label:"Rosé-Dusty",    img:"https://extremtextil.cstatic.com/media/4f/98/26/1717071114/08fd4e5df75afef5af28ce0b8c425952b138c67a.jpeg?quality=90"},
+      {label:"Turquoise",     img:"https://extremtextil.cstatic.com/media/40/d3/96/1717071152/761b34100eaa15a0725308207fb868c74803bf4d.jpeg?quality=90"},
+      {label:"Violet",        img:"https://extremtextil.cstatic.com/media/a2/c5/1f/1717071148/6df38546076a41fd123db37e18eb6a16ac1093d9.jpeg?quality=90"},
+      {label:"White",         img:"https://extremtextil.cstatic.com/media/39/bc/c1/1717071108/8d9bad9057e9c965a8d7b03e30ab9ae3d3950beb.jpeg?quality=90"},
+      {label:"Yellow",        img:"https://extremtextil.cstatic.com/media/9f/5a/8c/1717071100/69a29923b7a2bbbf5ad17dd9c2413c33fb71c3ca.jpeg?quality=90"},
+    ],
+    selectedColor:12, weight:"205 g/m²", weightSub:"", price:"€36.90", priceSub:"/meter",
+    url:"https://www.extremtextil.de/en/x-pac-vx21-backpack-laminate-205g-sqm/70524"
+  }
+];
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  if (!rows.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">No fabrics yet — paste a product URL above to get started</td></tr>`;
+  } else {
+    rows.forEach((r,i) => tbody.appendChild(buildRow(r,i)));
+  }
+  document.getElementById('rowCount').textContent = rows.length + ' fabric' + (rows.length!==1?'s':'');
+}
+
+function buildRow(r, idx) {
+  const sel = r.selectedColor || 0;
+  const cdId = 'cd' + idx;
+  const pvId = 'pv' + idx;
+  const sc = r.colors[sel];
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><span class="type-tag"><span class="dot"></span>${esc(r.type)}</span></td>
+    <td>
+      <div class="fabric-cell">
+        <div id="${pvId}">${swatchHtml(sc.label,sc.img,'lg')}</div>
+        <div>
+          <div class="fabric-brand">${esc(r.brand)}</div>
+          <div class="fabric-name">${esc(r.name)}</div>
+          <div class="fabric-art">${esc(r.article)}</div>
+        </div>
+      </div>
+    </td>
+    <td><div class="desc">${esc(r.desc)}</div></td>
+    <td><div class="specs">${r.specs.map(s=>`<div class="spec-row"><span class="spec-key">${esc(s.k)}</span><span class="spec-val">${esc(s.v)}</span></div>`).join('')}</div></td>
+    <td>${buildDropdown(cdId,pvId,r.colors,sel)}</td>
+    <td><div class="weight">${esc(r.weight)}<sub>${esc(r.weightSub)}</sub></div></td>
+    <td><div class="price">${esc(r.price)}<sub>${esc(r.priceSub)}</sub></div></td>
+    <td>
+      <div class="link-cell-inner">
+        <a class="link-btn" href="${esc(r.url)}" target="_blank">
+          <svg width="9" height="9" viewBox="0 0 11 11" fill="none"><path d="M1 10L10 1M10 1H4M10 1V7" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Open
+        </a>
+        <button class="del-btn" onclick="deleteRow(${idx})">✕ Remove</button>
+      </div>
+    </td>`;
+  return tr;
+}
+
+function buildDropdown(cdId, pvId, colors, selIdx) {
+  const items = colors.map((c,i)=>`
+    <div class="cd-item${i===selIdx?' sel':''}" data-label="${esc(c.label)}" data-img="${esc(c.img||'')}" onclick="pickColor('${cdId}','${pvId}',this)">
+      ${swatchHtml(c.label,c.img,'sm')}
+      <span class="cd-item-label">${esc(c.label)}</span>
+      <span class="cd-check">✓</span>
+    </div>`).join('');
+  const sc = colors[selIdx];
+  return `
+    <div class="cd-wrap" id="${cdId}">
+      <div class="cd-trigger" onclick="toggleDD(event,'${cdId}')">
+        <div id="ct${cdId}">${swatchHtml(sc.label,sc.img,'xs')}</div>
+        <span class="cd-label" id="cl${cdId}">${esc(sc.label)}</span>
+        <span class="cd-arrow">▾</span>
+      </div>
+      <div class="cd-menu" id="cm${cdId}">${items}</div>
+    </div>`;
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── DROPDOWN — fixed positioning to never overlap table ───────────────────────
+function toggleDD(e, id) {
+  e.stopPropagation();
+  const wrap = document.getElementById(id);
+  const menu = document.getElementById('cm' + id);
+  const isOpen = wrap.classList.contains('open');
+
+  // close all
+  closeAllDD();
+  if (isOpen) return;
+
+  // position the menu using fixed coords from trigger
+  const trigger = wrap.querySelector('.cd-trigger');
+  const rect = trigger.getBoundingClientRect();
+  menu.style.top  = (rect.bottom + 4) + 'px';
+  menu.style.left = rect.left + 'px';
+  menu.style.width = rect.width + 'px';
+
+  wrap.classList.add('open');
+}
+
+function closeAllDD() {
+  document.querySelectorAll('.cd-wrap.open').forEach(w => w.classList.remove('open'));
+}
+
+function pickColor(cdId, pvId, el) {
+  const label = el.dataset.label;
+  const img   = el.dataset.img || '';
+  document.getElementById('ct'+cdId).innerHTML = swatchHtml(label,img,'xs');
+  document.getElementById('cl'+cdId).textContent = label;
+  document.getElementById(pvId).innerHTML = swatchHtml(label,img,'lg');
+  document.getElementById(cdId).querySelectorAll('.cd-item').forEach(i=>i.classList.remove('sel'));
+  el.classList.add('sel');
+  closeAllDD();
+}
+
+document.addEventListener('click', e => { if (!e.target.closest('.cd-wrap')) closeAllDD(); });
+window.addEventListener('scroll', () => {
+  // reposition open menus on scroll
+  document.querySelectorAll('.cd-wrap.open').forEach(wrap => {
+    const trigger = wrap.querySelector('.cd-trigger');
+    const rect = trigger.getBoundingClientRect();
+    const menu = wrap.querySelector('.cd-menu');
+    menu.style.top  = (rect.bottom + 4) + 'px';
+    menu.style.left = rect.left + 'px';
+  });
+}, true);
+
+// ── DELETE ─────────────────────────────────────────────────────────────────────
+function deleteRow(idx) { rows.splice(idx,1); renderTable(); }
+
+// ── ADD ROW via Netlify Function ───────────────────────────────────────────────
+async function addRow() {
+  const input = document.getElementById('urlInput');
+  const url = input.value.trim();
+  if (!url) return;
+  setLoading(true);
+  showToast('loading','Fetching product data…');
+  try {
+    const res = await fetch('/api/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const fabric = await res.json();
+    if (!res.ok) throw new Error(fabric.error || `Server error ${res.status}`);
+    if (!fabric.name || !Array.isArray(fabric.colors) || !fabric.colors.length)
+      throw new Error('Incomplete data — try the direct product URL');
+    rows.push(fabric);
+    renderTable();
+    input.value = '';
+    hideToast();
+  } catch(err) {
+    showToast('error', err.message || 'Something went wrong');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('addBtn');
+  btn.disabled = on;
+  btn.innerHTML = on
+    ? 'Loading…'
+    : '<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg> Add Material';
+}
+function showToast(type,msg) {
+  const t=document.getElementById('toast');
+  document.getElementById('toastSpinner').style.display=type==='loading'?'block':'none';
+  document.getElementById('toastMsg').textContent=msg;
+  t.className='toast '+type;
+}
+function hideToast() { document.getElementById('toast').className='toast'; }
+
+renderTable();
+</script>
+</body>
+</html>

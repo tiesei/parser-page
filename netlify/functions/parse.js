@@ -8,9 +8,7 @@ export default async (req) => {
       }
     });
   }
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
   try {
     const { url } = await req.json();
@@ -19,7 +17,6 @@ export default async (req) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 });
 
-    // Fetch main page HTML
     const fetchHtml = async (pageUrl) => {
       const res = await fetch(pageUrl, {
         headers: {
@@ -28,68 +25,87 @@ export default async (req) => {
           'Accept-Language': 'en-US,en;q=0.5',
         }
       });
-      const raw = await res.text();
-      return raw.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-               .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-               .replace(/<!--[\s\S]*?-->/g, '')
-               .replace(/\s{2,}/g, ' ')
-               .slice(0, 20000);
+      return res.text();
     };
 
-    let html;
-    try {
-      html = await fetchHtml(url);
-    } catch (e) {
-      return new Response(JSON.stringify({ error: `Could not fetch page: ${e.message}` }), { status: 500 });
+    const extractFirstImage = (html) => {
+      const m = html.match(/content=["']([^"']*cstatic[^"']*\.(?:jpeg|jpg|png|webp)[^"']*)["']/i)
+               || html.match(/(https:\/\/[^\s"']+cstatic[^\s"']+\.(?:jpeg|jpg|png|webp))/i);
+      if (!m) return '';
+      return m[1].split('?')[0] + '?quality=90';
+    };
+
+    // Fetch main page
+    let rawHtml;
+    try { rawHtml = await fetchHtml(url); }
+    catch (e) { return new Response(JSON.stringify({ error: `Could not fetch page: ${e.message}` }), { status: 500 }); }
+
+    // Extract color variant URLs directly with regex (reliable, no AI needed)
+    const skuMatch = url.match(/\/(\d+)\.[A-Z0-9]+$/);
+    let colorUrls = [];
+    if (skuMatch) {
+      const sku = skuMatch[1];
+      const colorRegex = new RegExp(`https://[^\\s"'<>]+/${sku}\\.[A-Z0-9]+`, 'g');
+      const found = [...new Set(rawHtml.match(colorRegex) || [])];
+      colorUrls = found.filter(u => u.match(/\/\d+\.[A-Z0-9]+$/));
     }
+    // fallback: just use current URL
+    if (colorUrls.length === 0) colorUrls = [url];
 
-    // Step 1: parse main product data
+    // Extract color labels from HTML near the URLs
+    const getColorLabel = (html, colorUrl) => {
+      const suffix = colorUrl.match(/\.([A-Z0-9]+)$/)?.[1] || '';
+      // look for text near this URL in HTML
+      const idx = html.indexOf(colorUrl);
+      if (idx === -1) return suffix;
+      const nearby = html.slice(Math.max(0, idx - 200), idx + 200);
+      // common pattern: color name before the URL
+      const labelMatch = nearby.match(/\[([a-zA-Z][a-zA-Z\s\-]+?)\d+,\d+\s*EUR/);
+      return labelMatch ? labelMatch[1].trim() : suffix;
+    };
+
+    // Fetch all color pages in parallel for images
+    const colorPages = await Promise.all(
+      colorUrls.map(async (colorUrl) => {
+        try {
+          const h = await fetchHtml(colorUrl);
+          return { url: colorUrl, html: h, img: extractFirstImage(h) };
+        } catch {
+          return { url: colorUrl, html: '', img: '' };
+        }
+      })
+    );
+
+    // Use main page HTML for Claude analysis (trimmed)
+    const html = rawHtml
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .slice(0, 15000);
+
+    const colors = colorPages.map(cp => ({
+      label: getColorLabel(rawHtml, cp.url),
+      img: cp.img
+    }));
+    const selectedColor = colorUrls.findIndex(u => u === url || u.split('?')[0] === url.split('?')[0]);
+
     const prompt = `Here is the HTML of a product page from a textile/outdoor gear shop (URL: ${url}):
-
 <html>${html}</html>
 
 Extract product information and return ONLY valid JSON, no markdown, no code fences:
-{
-  "type": "Outer or Lining or Webbing or Zipper or Foam or Hardware or Other",
-  "brand": "brand name or empty",
-  "name": "product name",
-  "article": "SKU and width e.g. No. 72597 · 150cm",
-  "desc": "one sentence max 20 words",
-  "specs": [{"k":"Water","v":"..."},{"k":"Weight","v":"..."},{"k":"Width","v":"..."},{"k":"Origin","v":"..."}],
-  "colors": [{"label":"Color Name","url":"full URL to this color variant page","img":""}],
-  "selectedColor": 0,
-  "weight": "178 g/m²",
-  "weightSub": "imperial or empty",
-  "price": "€16.90",
-  "priceSub": "/meter",
-  "url": "${url}"
-}
-
-RULES:
-- colors: CRITICAL — search the HTML for ALL anchor tags containing the product SKU number (e.g. 72597) with different color suffixes like .SW .LMNLM .RNGGRN .WLFGR etc. Extract EVERY such link as a color variant. Format: {"label":"color name from link text","url":"https://www.extremtextil.de/en/FULL-PATH/SKU.COLOR","img":""}
-- selectedColor: index of color whose URL matches ${url}
-- price: find the price shown on page like "€16.90" or "16,90 EUR" — return as "€16.90"
-- specs: ONLY these 4 keys: Water, Weight, Width, Origin. No other keys.
-- Type: Outer=shell fabrics laminates. Lining=internal fabrics. Webbing=straps tapes. Zipper=zippers. Foam=padding. Hardware=buckles clips. Other=else.
-- Use — for missing spec values.`;
+{"type":"Outer or Lining or Webbing or Zipper or Foam or Hardware or Other","brand":"brand name or empty","name":"product name","article":"SKU · width e.g. No. 72597 · 150cm","desc":"one sentence max 20 words","specs":[{"k":"Water","v":"..."},{"k":"Weight","v":"..."},{"k":"Width","v":"..."},{"k":"Origin","v":"..."}],"weight":"178 g/m²","weightSub":"imperial or empty","price":"€16.90","priceSub":"/meter","url":"${url}"}
+Rules: specs = ONLY Water/Weight/Width/Origin. price = extract exactly as shown e.g. "€16.90". Use — for missing values. Type: Outer=shell fabrics laminates. Lining=internal. Webbing=straps. Zipper=zippers. Foam=padding. Hardware=buckles. Other=else.`;
 
     const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1024, messages: [{ role: 'user', content: prompt }] })
     });
 
     if (!apiRes.ok) {
       const err = await apiRes.text();
-      return new Response(JSON.stringify({ error: `API error: ${apiRes.status} — ${err}` }), { status: 500 });
+      return new Response(JSON.stringify({ error: `API error: ${apiRes.status}` }), { status: 500 });
     }
 
     const data = await apiRes.json();
@@ -99,37 +115,17 @@ RULES:
     let jsonStr = textBlock.text.trim()
       .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
-    console.log('Claude response:', jsonStr.slice(0, 500));
     let fabric;
-    try {
-      fabric = JSON.parse(jsonStr);
-    } catch {
+    try { fabric = JSON.parse(jsonStr); }
+    catch {
       const m = jsonStr.match(/\{[\s\S]*\}/);
       if (!m) return new Response(JSON.stringify({ error: 'Could not parse product data' }), { status: 500 });
       fabric = JSON.parse(m[0]);
     }
 
-    // Step 2: fetch image for each color variant in parallel
-    if (Array.isArray(fabric.colors) && fabric.colors.length > 0) {
-      const getFirstImage = async (colorUrl) => {
-        if (!colorUrl) return '';
-        try {
-          const h = await fetchHtml(colorUrl);
-          // look for og:image meta tag first (most reliable)
-          const ogMatch = h.match(/og:image[^>]*content=["']([^"']+cstatic[^"']+)["']/i)
-                       || h.match(/content=["']([^"']+cstatic[^"']+\.(?:jpeg|jpg|png|webp)[^"']*)["']/i);
-          if (ogMatch) return ogMatch[1].split('?')[0] + '?quality=90';
-          // fallback: first cstatic image
-          const imgMatch = h.match(/https:\/\/[^"'\s]+cstatic[^"'\s]+\.(?:jpeg|jpg|png|webp)/i);
-          return imgMatch ? imgMatch[0].split('?')[0] + '?quality=90' : '';
-        } catch { return ''; }
-      };
-
-      const images = await Promise.all(
-        fabric.colors.map(c => getFirstImage(c.url || ''))
-      );
-      fabric.colors = fabric.colors.map((c, i) => ({ label: c.label, img: images[i] || '' }));
-    }
+    // Attach colors extracted by regex (reliable) instead of Claude's
+    fabric.colors = colors;
+    fabric.selectedColor = selectedColor >= 0 ? selectedColor : 0;
 
     return new Response(JSON.stringify(fabric), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }

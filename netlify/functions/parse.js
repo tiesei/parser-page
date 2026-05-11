@@ -116,5 +116,3 @@ IMPORTANT RULES:
     return new Response(JSON.stringify({ error: err.message || 'Unknown error' }), { status: 500 });
   }
 };
-
-export const config = { path: '/api/parse' };

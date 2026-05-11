@@ -12,11 +12,31 @@ export default async (req) => {
     return new Response('Method not allowed', { status: 405 });
   }
   try {
-    const { url, html } = await req.json();
-    if (!url || !html) return new Response(JSON.stringify({ error: 'Missing url or html' }), { status: 400 });
+    const { url } = await req.json();
+    if (!url) return new Response(JSON.stringify({ error: 'No URL provided' }), { status: 400 });
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 });
+
+    // Fetch HTML server-side
+    let html = '';
+    try {
+      const pageRes = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        }
+      });
+      const raw = await pageRes.text();
+      html = raw.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                .replace(/<!--[\s\S]*?-->/g, '')
+                .replace(/\s{2,}/g, ' ')
+                .slice(0, 10000);
+    } catch (fetchErr) {
+      return new Response(JSON.stringify({ error: `Could not fetch page: ${fetchErr.message}` }), { status: 500 });
+    }
 
     const prompt = `Here is the HTML of a product page from a textile/outdoor gear shop (URL: ${url}):
 
@@ -42,7 +62,7 @@ Type: Outer=shell fabrics laminates. Lining=internal fabrics. Webbing=straps tap
 
     if (!res.ok) {
       const err = await res.text();
-      return new Response(JSON.stringify({ error: `API error: ${res.status}` }), { status: 500 });
+      return new Response(JSON.stringify({ error: `API error: ${res.status} — ${err}` }), { status: 500 });
     }
 
     const data = await res.json();

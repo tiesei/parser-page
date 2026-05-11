@@ -35,7 +35,7 @@ export default async (req) => {
                 .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
                 .replace(/<!--[\s\S]*?-->/g, '')
                 .replace(/\s{2,}/g, ' ')
-                .slice(0, 18000);
+                ..slice(0, 10000);
     } catch (fetchErr) {
       return new Response(JSON.stringify({ error: `Could not fetch page: ${fetchErr.message}` }), { status: 500 });
     }
@@ -74,7 +74,7 @@ Extract all color variants with image URLs. Use dash for missing specs.`;
       },
       body: JSON.stringify({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2000,
+         max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }]
       })
     });

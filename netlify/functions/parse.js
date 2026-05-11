@@ -66,12 +66,12 @@ Extract product information and return ONLY valid JSON, no markdown, no code fen
 }
 
 RULES:
-- colors: find ALL color variants (look for variant links, color option labels, URLs like /72597.SW /72597.LMNLM). For each color provide its name and its full variant page URL. Leave img empty string.
-- selectedColor: index of the color matching the current URL.
-- price: extract exactly as shown e.g. "€16.90". Look for "€16.90/meter" or "16,90 EUR".
-- article: SKU number and roll width.
+- colors: CRITICAL — search the HTML for ALL anchor tags containing the product SKU number (e.g. 72597) with different color suffixes like .SW .LMNLM .RNGGRN .WLFGR etc. Extract EVERY such link as a color variant. Format: {"label":"color name from link text","url":"https://www.extremtextil.de/en/FULL-PATH/SKU.COLOR","img":""}
+- selectedColor: index of color whose URL matches ${url}
+- price: find the price shown on page like "€16.90" or "16,90 EUR" — return as "€16.90"
+- specs: ONLY these 4 keys: Water, Weight, Width, Origin. No other keys.
 - Type: Outer=shell fabrics laminates. Lining=internal fabrics. Webbing=straps tapes. Zipper=zippers. Foam=padding. Hardware=buckles clips. Other=else.
-- Use — for missing specs.`;
+- Use — for missing spec values.`;
 
     const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
